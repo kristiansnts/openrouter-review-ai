@@ -1,0 +1,75 @@
+name: 'Ollama Code Review Action'
+description: 'Automated code review using Ollama AI model for pull requests'
+author: 'Carofi Auto'
+
+branding:
+  icon: 'eye'
+  color: 'blue'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+  file-pattern:
+    description: 'Glob pattern for files to review (e.g., "**/*.{ts,tsx}")'
+    required: false
+    default: '**/*.{ts,tsx}'
+  model:
+    description: 'Ollama model to use for code review'
+    required: false
+    default: 'codellama'
+  base-branch:
+    description: 'Base branch to compare against'
+    required: false
+    default: 'origin/develop'
+  concurrency-limit:
+    description: 'Number of files to review concurrently'
+    required: false
+    default: '5'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get changed files
+      uses: tj-actions/changed-files@v42
+      id: changed-files
+
+    - name: Install Ollama
+      shell: bash
+      run: |
+        curl -fsSL https://ollama.com/install.sh | sh
+        ollama serve &
+        sleep 10
+        ollama pull ${{ inputs.model }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      shell: bash
+      run: npm install parse-diff minimatch glob
+
+    - name: Run Code Review
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        FILE_PATTERN: ${{ inputs.file-pattern }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+        CONCURRENCY_LIMIT: ${{ inputs.concurrency-limit }}
+      run: node ${{ github.action_path }}/.github/scripts/code-review/main.js
+
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: sudo systemctl stop ollama || pkill ollama 
