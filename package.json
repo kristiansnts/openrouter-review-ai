@@ -1,0 +1,14 @@
+{
+  "name": "pr-review-ollama-ai",
+  "version": "1.0.0",
+  "description": "PR Review with TypeScript checks",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24"
+  }
+} 
