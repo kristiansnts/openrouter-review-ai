@@ -1,4 +1,4 @@
-name: 'Ollama Code Review Action'
+name: 'AI Code Reviewer Action'
 description: 'Automated code review using Ollama AI model for pull requests'
 author: 'Carofi Auto'
 
