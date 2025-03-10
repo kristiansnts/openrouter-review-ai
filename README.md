@@ -1,4 +1,4 @@
-# Ollama Code Review Action 🔍
+# AI Code Reviewer 🔍
 
 Automate your code reviews with AI-powered insights using Ollama's local models. This GitHub Action provides intelligent code review comments directly in your pull requests, helping catch potential issues and maintain code quality without sending your code to external services.
 
