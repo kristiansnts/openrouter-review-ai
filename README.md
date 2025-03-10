@@ -38,7 +38,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: carofi-auto/ollama-code-review@v1
+      - uses: carofi-auto/ollama-code-review@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file-pattern: "**/*.{ts,tsx}"  # Adjust based on your needs
@@ -61,7 +61,7 @@ jobs:
 ### Example with Custom Configuration
 
 ```yaml
-- uses: carofi-auto/ollama-code-review@v1
+- uses: carofi-auto/ollama-code-review@v2
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     file-pattern: "**/*.{js,jsx,ts,tsx}"
