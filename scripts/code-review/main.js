@@ -1,6 +1,6 @@
 const { ReviewStats } = require('./stats');
 const { GitHubAPI } = require('./github');
-const { OllamaAPI } = require('./ollama');
+const { OpenRouterAPI } = require('./openrouter');
 const { REVIEW_CONFIG } = require('./config');
 const parseDiff = require('parse-diff');
 const fs = require('fs');
@@ -94,7 +94,7 @@ function getChangedLines(chunk) {
   };
 }
 
-async function processChunk(chunk, file, github, ollama, stats) {
+async function processChunk(chunk, file, github, openrouter, stats) {
   const { context, addedLines } = getChangedLines(chunk);
   if (addedLines.length === 0) return;
 
@@ -110,7 +110,7 @@ async function processChunk(chunk, file, github, ollama, stats) {
   console.log(`Reviewing ${file.to} with context:\n${contentWithLines}`);
   console.log('Changed lines:', addedLines);
 
-  const reviews = await ollama.reviewCode(contentWithLines, file.to, addedLines);
+  const reviews = await openrouter.reviewCode(contentWithLines, file.to, addedLines);
   console.log('Received reviews:', JSON.stringify(reviews, null, 2));
 
   const commentsToPost = [];
@@ -177,11 +177,29 @@ async function processChunk(chunk, file, github, ollama, stats) {
 async function main() {
   try {
     const github = new GitHubAPI(process.env.GITHUB_TOKEN);
-    const ollama = new OllamaAPI();
+    const openrouter = new OpenRouterAPI();
     const stats = new ReviewStats();
 
-    const baseBranch = process.env.BASE_BRANCH || 'origin/develop';
-    const diffOutput = execSync(`git diff ${baseBranch} HEAD`).toString();
+    // Use the GitHub event's base branch or fall back to 'main'
+    const baseBranch = process.env.BASE_BRANCH || 'origin/main';
+    
+    // Fetch the base branch to ensure it exists
+    try {
+      execSync('git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*');
+      console.log('Fetched remote branches');
+    } catch (fetchError) {
+      console.warn('Warning: Failed to fetch branches:', fetchError.message);
+    }
+    
+    // Get the diff between the base branch and current HEAD
+    let diffOutput;
+    try {
+      diffOutput = execSync(`git diff ${baseBranch} HEAD`).toString();
+    } catch (diffError) {
+      console.warn(`Failed to diff against ${baseBranch}, falling back to comparing with HEAD~1`);
+      diffOutput = execSync('git diff HEAD~1 HEAD').toString();
+    }
+    
     const files = parseDiff(diffOutput);
 
     const filesToReview = files.filter((file) => file.to && minimatch(file.to, filePattern));
@@ -194,7 +212,7 @@ async function main() {
     for (let i = 0; i < chunks.length; i += REVIEW_CONFIG.concurrencyLimit) {
       const batch = chunks.slice(i, i + REVIEW_CONFIG.concurrencyLimit);
       await Promise.all(
-        batch.map(({ chunk, file }) => processChunk(chunk, file, github, ollama, stats))
+        batch.map(({ chunk, file }) => processChunk(chunk, file, github, openrouter, stats))
       );
     }
 

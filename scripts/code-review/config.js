@@ -13,9 +13,10 @@ const REVIEW_CONFIG = {
     'ai-praise': '👏'
   },
   concurrencyLimit: 3,
-  supportedExtensions: '.(js|jsx|ts|tsx|py|go|java|rb|php|cs)$',
-  maxFileSize: 500000, // 500KB
-  reviewPrompt: `Review the code changes and provide specific, actionable feedback. Focus on:
+  supportedExtensions: '\.(js|jsx|ts|tsx|py|go|java|rb|php|cs)$',
+  maxFileSize: 500 * 1024, // 500KB
+  reviewPrompt: `
+    Review the code changes and provide specific, actionable feedback. Focus on:
     1. Type safety and potential runtime issues
     2. Architecture and design patterns
     3. Code readability and maintainability
@@ -29,7 +30,8 @@ const REVIEW_CONFIG = {
     - Message: <detailed_explanation>
     
     Combine multiple issues on the same line into a single comment.
-    Be specific and provide examples where possible.`
+    Be specific and provide examples where possible.
+  `
 };
 
 module.exports = {
