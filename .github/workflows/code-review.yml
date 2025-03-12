@@ -1,32 +1,33 @@
-name: Ollama Code Review
+name: Openrouter Code Review
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - '**/*.py'  # Adjust for your code language
+      - '**/*.php'
+      - '**/*.js'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '!**/*.yml'  # Exclude .yml files from triggering the workflow
 
+# Add permissions block to allow writing to pull requests
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  code-review:
+  review:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v42
-
-      - name: Install Ollama
-        run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-          ollama serve &
-          sleep 10
-          ollama pull codellama
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,19 +38,22 @@ jobs:
         run: |
           npm install parse-diff minimatch glob
 
+      - name: Extract diff
+        run: |
+          git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > diff.patch
+          cat diff.patch
+
       - name: Run Code Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
-          FILE_PATTERN: '**/*.{ts,tsx}'
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          FILE_PATTERN: '**/*.{js,jsx,ts,tsx,py,php}'
+          MODEL: 'deepseek/deepseek-r1-distill-llama-70b:free'
         run: |
           echo "Starting code review process..."
-          node .github/scripts/code-review/main.js
-
-      - name: Cleanup
-        if: always()
-        run: |
-          sudo systemctl stop ollama || pkill ollama
+          node ./scripts/code-review/main.js

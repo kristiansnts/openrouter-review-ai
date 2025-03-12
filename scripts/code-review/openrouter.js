@@ -1,12 +1,17 @@
-const http = require('http');
+const https = require('https');
 const { REVIEW_CONFIG } = require('./config');
 const { minimatch } = require('minimatch');
 
-class OllamaAPI {
-  constructor(model = 'codellama') {
-    this.baseUrl = 'http://localhost:11434';
-    this.model = model;
-    this.filePattern = process.env.FILE_PATTERN || '**/*.{ts,tsx}';
+class OpenRouterAPI {
+  constructor(model = 'deepseek/deepseek-r1-distill-llama-70b:free') {
+    this.baseUrl = 'https://openrouter.ai/api/v1';
+    this.model = process.env.MODEL || model;
+    this.filePattern = process.env.FILE_PATTERN || '**/*.{js,jsx,ts,tsx,py,php}';
+    this.apiKey = process.env.OPENROUTER_API_KEY;
+    
+    if (!this.apiKey) {
+      throw new Error('OPENROUTER_API_KEY environment variable is required');
+    }
   }
 
   shouldReviewFile(filename) {
@@ -16,16 +21,19 @@ class OllamaAPI {
   async makeRequest(endpoint, data) {
     return new Promise((resolve, reject) => {
       const options = {
-        hostname: 'localhost',
-        port: 11434,
-        path: endpoint,
+        hostname: 'openrouter.ai',
+        port: 443,
+        path: `/api/v1${endpoint}`,
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+          'HTTP-Referer': process.env.GITHUB_REPOSITORY || 'https://github.com',
+          'X-Title': 'GitHub Code Review'
         }
       };
 
-      const req = http.request(options, (res) => {
+      const req = https.request(options, (res) => {
         let responseData = '';
 
         res.on('data', (chunk) => {
@@ -36,13 +44,13 @@ class OllamaAPI {
           try {
             resolve(JSON.parse(responseData));
           } catch (e) {
-            reject(new Error(`Failed to parse Ollama response: ${e.message}`));
+            reject(new Error(`Failed to parse OpenRouter response: ${e.message}`));
           }
         });
       });
 
       req.on('error', (error) => {
-        reject(new Error(`Ollama API request failed: ${error.message}`));
+        reject(new Error(`OpenRouter API request failed: ${error.message}`));
       });
 
       req.write(JSON.stringify(data));
@@ -102,23 +110,35 @@ Rules:
 If no issues found, return: []`;
 
     try {
-      const response = await this.makeRequest('/api/generate', {
+      const response = await this.makeRequest('/chat/completions', {
         model: this.model,
-        prompt,
-        stream: false,
+        messages: [
+          { role: "system", content: "You are an expert code reviewer providing detailed, actionable feedback in JSON format." },
+          { role: "user", content: prompt }
+        ],
         temperature: 0.1,
-        top_k: 10,
+        max_tokens: 2048,
         top_p: 0.9
       });
 
       try {
-        const reviews = JSON.parse(response.response);
-        return reviews.filter(
-          (review) =>
-            changedLines.includes(review.line) && review.type && review.severity && review.message
-        );
+        // Extract the content from the OpenRouter response
+        const content = response.choices[0].message.content;
+        // Find the JSON array in the response
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        
+        if (jsonMatch) {
+          const reviews = JSON.parse(jsonMatch[0]);
+          return reviews.filter(
+            (review) =>
+              changedLines.includes(review.line) && review.type && review.severity && review.message
+          );
+        } else {
+          console.error('No valid JSON found in response');
+          return [];
+        }
       } catch (error) {
-        console.error('Error parsing Ollama review response:', error);
+        console.error('Error parsing OpenRouter review response:', error);
         return [];
       }
     } catch (error) {
@@ -129,5 +149,5 @@ If no issues found, return: []`;
 }
 
 module.exports = {
-  OllamaAPI
+  OpenRouterAPI
 };

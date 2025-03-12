@@ -6,17 +6,23 @@ class GitHubAPI {
     this.baseUrl = 'api.github.com';
   }
 
-  async makeRequest(method, path, data = null) {
+  async makeRequest(method, path, data = null, headers = null) {
     return new Promise((resolve, reject) => {
+      const requestHeaders = {
+        Authorization: `Bearer ${this.token}`,
+        'User-Agent': 'OpenRouter-Code-Review-Bot',
+        Accept: 'application/vnd.github.v3+json'
+      };
+      
+      if (headers) {
+        Object.assign(requestHeaders, headers);
+      }
+
       const options = {
         hostname: this.baseUrl,
         path,
         method,
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          'User-Agent': 'Ollama-Code-Review-Bot',
-          Accept: 'application/vnd.github.v3+json'
-        }
+        headers: requestHeaders
       };
 
       if (data) {
@@ -36,7 +42,7 @@ class GitHubAPI {
               const parsed = JSON.parse(responseData);
               resolve(parsed);
             } catch (e) {
-              resolve(responseData);
+              reject(new Error(`Failed to parse GitHub API response: ${e.message}`));
             }
           } else {
             reject(new Error(`GitHub API request failed: ${res.statusCode} - ${responseData}`));
@@ -76,8 +82,8 @@ class GitHubAPI {
         side: 'RIGHT'
       });
     } catch (error) {
-      if (error.message.includes('position')) {
-        console.log('Retrying comment creation without position parameter...');
+      if (error.statusCode === 422 || (error.response && error.response.statusCode === 422)) {
+        console.log('Invalid position parameter detected, retrying with modified payload...');
         const reviewPath = `/repos/${owner}/${repo}/pulls/${prNumber}/comments`;
         return await this.makeRequest('POST', reviewPath, {
           body,
@@ -109,7 +115,6 @@ class GitHubAPI {
   async getPullRequestDiff(owner, repo, prNumber) {
     const path = `/repos/${owner}/${repo}/pulls/${prNumber}`;
     const headers = {
-      ...this.headers,
       Accept: 'application/vnd.github.v3.diff'
     };
     return this.makeRequest('GET', path, null, headers);

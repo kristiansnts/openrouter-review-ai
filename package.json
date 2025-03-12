@@ -1,7 +1,7 @@
 {
-  "name": "pr-review-ollama-ai",
+  "name": "openrouter-review-ai",
   "version": "1.0.0",
-  "description": "PR Review with TypeScript checks",
+  "description": "PR Review with Openrouter",
   "scripts": {
     "type-check": "tsc --noEmit"
   },

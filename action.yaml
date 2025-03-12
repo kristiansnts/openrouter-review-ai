@@ -1,6 +1,6 @@
-name: 'AI Code Reviewer Action'
-description: 'Automated code review using Ollama AI model for pull requests'
-author: 'Carofi Auto'
+name: 'Openrouter Code Reviewer Action'
+description: 'Automated code review using Openrouter AI models for pull requests'
+author: 'Kristiansnts'
 
 branding:
   icon: 'eye'
@@ -10,18 +10,21 @@ inputs:
   github-token:
     description: 'GitHub token for API access'
     required: true
+  openrouter-api-key:
+    description: 'OpenRouter API key for accessing AI models'
+    required: true
   file-pattern:
     description: 'Glob pattern for files to review (e.g., "**/*.{ts,tsx}")'
     required: false
-    default: '**/*.{ts,tsx}'
+    default: '**/*.{js,jsx,ts,tsx,py,php}'
   model:
-    description: 'Ollama model to use for code review'
+    description: 'OpenRouter model to use for code review'
     required: false
-    default: 'codellama'
+    default: 'deepseek/deepseek-r1-distill-llama-70b:free'
   base-branch:
     description: 'Base branch to compare against'
     required: false
-    default: 'origin/develop'
+    default: ''
   concurrency-limit:
     description: 'Number of files to review concurrently'
     required: false
@@ -39,14 +42,6 @@ runs:
       uses: tj-actions/changed-files@v42
       id: changed-files
 
-    - name: Install Ollama
-      shell: bash
-      run: |
-        curl -fsSL https://ollama.com/install.sh | sh
-        ollama serve &
-        sleep 10
-        ollama pull ${{ inputs.model }}
-
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -60,16 +55,13 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        OPENROUTER_API_KEY: ${{ inputs.openrouter-api-key }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
         FILE_PATTERN: ${{ inputs.file-pattern }}
-        BASE_BRANCH: ${{ inputs.base-branch }}
+        BASE_BRANCH: ${{ inputs.base-branch || github.event.pull_request.base.ref }}
+        MODEL: ${{ inputs.model }}
         CONCURRENCY_LIMIT: ${{ inputs.concurrency-limit }}
       run: node ${{ github.action_path }}/.github/scripts/code-review/main.js
-
-    - name: Cleanup
-      if: always()
-      shell: bash
-      run: sudo systemctl stop ollama || pkill ollama 
