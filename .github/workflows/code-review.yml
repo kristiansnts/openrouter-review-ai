@@ -36,7 +36,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd $GITHUB_WORKSPACE
+          cd $GITHUB_ACTION_PATH
           npm install parse-diff minimatch glob
 
       - name: Extract diff
@@ -57,4 +57,4 @@ jobs:
           MODEL: 'deepseek/deepseek-r1-distill-llama-70b:free'
         run: |
           echo "Starting code review process..."
-          node ./scripts/code-review/main.js
+          node $GITHUB_ACTION_PATH/scripts/code-review/main.js
