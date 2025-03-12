@@ -64,4 +64,4 @@ runs:
         BASE_BRANCH: ${{ inputs.base-branch || github.event.pull_request.base.ref }}
         MODEL: ${{ inputs.model }}
         CONCURRENCY_LIMIT: ${{ inputs.concurrency-limit }}
-      run: node ${{ github.action_path }}/.github/scripts/code-review/main.js
+      run: node ${{ github.action_path }}/scripts/code-review/main.js
