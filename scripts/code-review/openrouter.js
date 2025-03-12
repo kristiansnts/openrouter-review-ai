@@ -64,11 +64,7 @@ class OpenRouterAPI {
     }
 
     const prompt = `You are an expert code reviewer. Review the following code changes and provide specific, actionable feedback. Focus on:
-1. Type safety and potential runtime issues
-2. Architecture and design patterns
-3. Code readability and maintainability
-4. Security vulnerabilities (IMPORTANT: for security issues like 'eval', use the EXACT line where the dangerous function is called)
-5. Performance implications
+${REVIEW_CONFIG.reviewPrompt}
 
 The code below shows:
 - Each line starts with its EXACT line number followed by a colon
@@ -92,7 +88,7 @@ Response format (use EXACT line numbers from the start of lines):
 [
   {
     "line": <number_from_start_of_line>,
-    "type": "type-safety" | "architecture" | "readability" | "security" | "performance" | "suggestion" | "good-practice",
+    "type": ${Object.keys(REVIEW_CONFIG.emojis).map(type => `"${type}"`).join(' | ')},
     "severity": "high" | "medium" | "low",
     "message": "<specific_issue_and_recommendation>"
   }
