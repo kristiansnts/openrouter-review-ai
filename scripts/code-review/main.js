@@ -1,4 +1,3 @@
-const { ReviewStats } = require('./stats');
 const { GitHubAPI } = require('./github');
 const { OpenRouterAPI } = require('./openrouter');
 const { REVIEW_CONFIG } = require('./config');
@@ -94,7 +93,7 @@ function getChangedLines(chunk) {
   };
 }
 
-async function processChunk(chunk, file, github, openrouter, stats) {
+async function processChunk(chunk, file, github, openrouter) {
   const { context, addedLines } = getChangedLines(chunk);
   if (addedLines.length === 0) return;
 
@@ -126,11 +125,10 @@ async function processChunk(chunk, file, github, openrouter, stats) {
       continue;
     }
 
-    stats.updateStats(review.type, review.severity, review.message, file.to, review.line);
     commentsToPost.push({
       ...review,
       path: file.to,
-      line: review.line, // Use the actual line number
+      line: review.line,
       message: review.message
     });
   }
@@ -178,7 +176,6 @@ async function main() {
   try {
     const github = new GitHubAPI(process.env.GITHUB_TOKEN);
     const openrouter = new OpenRouterAPI();
-    const stats = new ReviewStats();
 
     // Use the GitHub event's base branch or fall back to 'main'
     const baseBranch = process.env.BASE_BRANCH || 'origin/main';
@@ -212,17 +209,9 @@ async function main() {
     for (let i = 0; i < chunks.length; i += REVIEW_CONFIG.concurrencyLimit) {
       const batch = chunks.slice(i, i + REVIEW_CONFIG.concurrencyLimit);
       await Promise.all(
-        batch.map(({ chunk, file }) => processChunk(chunk, file, github, openrouter, stats))
+        batch.map(({ chunk, file }) => processChunk(chunk, file, github, openrouter))
       );
     }
-
-    const summary = stats.generateSummary();
-    await github.postComment(
-      process.env.GITHUB_REPOSITORY_OWNER,
-      process.env.GITHUB_REPOSITORY.split('/')[1],
-      process.env.PR_NUMBER,
-      summary
-    );
 
     console.log('Code review completed successfully');
   } catch (error) {
