@@ -38,10 +38,6 @@ runs:
       with:
         fetch-depth: 0
 
-    - name: Get changed files
-      uses: tj-actions/changed-files@v42
-      id: changed-files
-
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
