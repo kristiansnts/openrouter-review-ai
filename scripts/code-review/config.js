@@ -13,8 +13,8 @@ const REVIEW_CONFIG = {
   supportedExtensions: '\.(js|jsx|ts|tsx|py|go|java|rb|php|cs)$',
   maxFileSize: 500 * 1024, // 500KB
   reviewPrompt: `
-    Review the code changes and provide specific, actionable feedback. Focus on:
-    1. Unused Comment and Imports
+    Review the code changes and provide specific based on the programming language, actionable feedback. Focus on:
+    1. Unused Comment and Imports (check if the comment is used for documentation standarts like phpdoc or jsdoc)
     2. Avoid hardcoding values
     3. Use Meaningful Variable and Function Names
     4. Write Short Functions That Only Do One Thing
